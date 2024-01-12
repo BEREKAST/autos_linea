@@ -4,6 +4,7 @@ from config.database import connect_to_database
 from utils.time import convert_milliseconds_to_datetime,convert_milliseconds_to_time_string
 from api.distribuidor.distribuidor_methods import procesar_articulo
 from datetime import datetime
+from utils.serializer import resultados_a_json, convertir_a_datetime
 
 sucursal_fl2 = Blueprint('sucursal_methods', __name__)
 
@@ -220,7 +221,7 @@ def obtener_autos_por_sucursal(id_sucursal):
                     WHERE as_rel.id_sucursal = ?
                 """
                 cursor.execute(sql, (id_sucursal,))
-                autos = cursor.fetchall()
+                autos = resultados_a_json(cursor)
 
                 if not autos:
                     return jsonify({"error": f"No se encontraron articulos para la sucursal con ID {id_sucursal}"}), 404
@@ -243,7 +244,7 @@ def obtener_articulos_por_distribuidor(id_sucursal):
                     WHERE ds.id_sucursal = ?;
                 """
                 cursor.execute(sql_query, (id_sucursal,))
-                articulos = cursor.fetchall()
+                articulos = resultados_a_json(cursor)
 
                 articulos_procesados = []
                 for articulo_record in articulos:
@@ -269,7 +270,7 @@ def obtener_usuarios_por_distribuidor(id_sucursal):
                     WHERE id_sucursal = ?
                 """
                 cursor.execute(sql, (id_sucursal,))
-                usuarios = cursor.fetchall()
+                usuarios = resultados_a_json(cursor)
                 print(usuarios)
                 for user in usuarios:
                     for key in ['created', 'lastUpdate']:

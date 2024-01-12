@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template
 from config.database import connect_to_database
 from flask import Flask, Response, jsonify, request
+from utils.serializer import resultados_a_json, convertir_a_datetime
 
 articulo_fl1=Blueprint('articulo_id', __name__)
 
@@ -17,7 +18,7 @@ def get_articulo(connection, id_articulo):
                 WHERE a.id_articulo = ?
             """
             cursor.execute(sql_articulo, (id_articulo,))
-            raw_results = cursor.fetchall()
+            raw_results = resultados_a_json(cursor)
 
             if not raw_results:
                 return None  # No se encontró el artículo
@@ -30,9 +31,9 @@ def get_articulo(connection, id_articulo):
                 'ano': raw_results[0]['ano'],
                 'precio': raw_results[0]['precio'],
                 'kilometraje': raw_results[0]['kilometraje'],
-                'created': int(raw_results[0]['created'].timestamp() * 1000),
-                'lastUpdate': int(raw_results[0]['lastUpdate'].timestamp() * 1000),
-                'lastInventoryUpdate':int(raw_results[0]['lastInventoryUpdate'].timestamp() * 1000),
+                'created': int(convertir_a_datetime(raw_results[0]['created']).timestamp() * 1000),
+                'lastUpdate': int(convertir_a_datetime(raw_results[0]['lastUpdate']).timestamp() * 1000),
+                'lastInventoryUpdate':int(convertir_a_datetime(raw_results[0]['lastInventoryUpdate']).timestamp() * 1000),
                 'enable': raw_results[0]['enable'],
                 'descripcion': raw_results[0]['descripcion'],
                 'enable': raw_results[0]['enable'],
@@ -53,7 +54,7 @@ def get_articulo(connection, id_articulo):
                         WHERE id_especificacion = ?
                     """
                     cursor.execute(sql_subespecificaciones, (id_especificacion,))
-                    subespecificaciones_raw = cursor.fetchall()
+                    subespecificaciones_raw = resultados_a_json(cursor)
                     subespecificaciones = {sub['clave']: sub['valor'] for sub in subespecificaciones_raw}
 
                     especificacion = {

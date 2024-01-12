@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask import Blueprint
 from config.database import connect_to_database
+from utils.serializer import resultados_a_json, convertir_a_datetime
 
 images_sucursal_fl2 = Blueprint('images_sucursal', __name__)
 
@@ -14,7 +15,7 @@ def get_all_images_by_id(sucursal_id):
                                 SELECT * FROM images_sucursal WHERE id_sucursal =?
                             """
                 cursor.execute(sql_id_sucursal, sucursal_id)
-                sucursal_images= cursor.fetchall()  
+                sucursal_images= resultados_a_json(cursor)  
                 return jsonify(sucursal_images)
     except Exception as e:
         return jsonify({"error":f"Error en la conexion a la bd: {e}"}),500
@@ -28,7 +29,7 @@ def get_all_images():
                                 SELECT * FROM images_sucursal 
                             """
                 cursor.execute(sql_id_sucursal)
-                sucursal_images= cursor.fetchall()  
+                sucursal_images= resultados_a_json(cursor)  
                 return jsonify(sucursal_images)
     except Exception as e:
         return jsonify({"error":f"Error en la conexion a la bd: {e}"}),500

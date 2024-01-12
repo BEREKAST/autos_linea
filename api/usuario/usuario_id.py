@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template
 from config.database import connect_to_database
 from flask import Flask, Response, jsonify, request
+from utils.serializer import resultados_a_json, convertir_a_datetime
+from datetime import datetime
 
 usuario_fl1=Blueprint('usuario_id', __name__)
 
@@ -8,14 +10,17 @@ usuario_fl1=Blueprint('usuario_id', __name__)
 def get_usuario(connection, usuario_id):
     try:
         with connection.cursor() as cursor:
-            sql_usuario = """SELECT * FROM usuario WHERE id_usuario = """
+            sql_usuario = """SELECT * FROM usuario WHERE id_usuario = ?"""
+            
             cursor.execute(sql_usuario, (usuario_id,))
-            usuario_info = cursor.fetchone()
+            usuario_info = resultados_a_json(cursor, unico_resultado=True)
 
             if usuario_info:
-                for key in ['created', 'lastUpdate']: 
+                for key in ['created', 'lastUpdate']:
+      
                     if usuario_info[key]:
-                        usuario_info[key] = int(usuario_info[key].timestamp() * 1000)
+                        usuarios_info_2=convertir_a_datetime(usuario_info[key])
+                        usuario_info[key] = int(usuarios_info_2.timestamp() * 1000)
 
             return usuario_info
     except Exception as e:
@@ -25,14 +30,16 @@ def get_usuario(connection, usuario_id):
 def get_usuario_by_id_fire(connection, usuario_id):
     try:
         with connection.cursor() as cursor:
-            sql_usuario = """SELECT * FROM usuario WHERE id_usuario_firebase = """
+            sql_usuario = """SELECT * FROM usuario WHERE id_usuario_firebase = ?"""
             cursor.execute(sql_usuario, (usuario_id,))
-            usuario_info = cursor.fetchone()
+            usuario_info = resultados_a_json(cursor, unico_resultado=True)
 
             if usuario_info:
                 for key in ['created', 'lastUpdate']: 
                     if usuario_info[key]:
-                        usuario_info[key] = int(usuario_info[key].timestamp() * 1000)
+                        usuarios_info_2=convertir_a_datetime(usuario_info[key])
+
+                        usuario_info[key] = int(usuarios_info_2.timestamp() * 1000)
       
             return usuario_info
     except Exception as e:

@@ -4,6 +4,7 @@ from flask import Flask, Response, jsonify, request
 from .articulo_id import articulo_fl1
 from .articulo_methods import articulo_fl2
 from .images_articulo.images_articulo import articulo_fl3
+from utils.serializer import resultados_a_json, convertir_a_datetime
 
 
 articulo_fl = Blueprint('articulo', __name__)
@@ -25,7 +26,7 @@ def get_articulos(connection):
             ORDER BY a.id_articulo
         """
             cursor.execute(sql_articulo)
-            raw_results = cursor.fetchall()
+            raw_results = resultados_a_json(cursor)
             print(raw_results)
             articulo_results = {}
             processed_especificaciones = set()
@@ -41,9 +42,9 @@ def get_articulos(connection):
                         'ano': row['ano'],
                         'precio': row['precio'],
                         'kilometraje': row['kilometraje'],
-                        'created': int(row['created'].timestamp() * 1000),
-                        'lastUpdate': int(row['lastUpdate'].timestamp() * 1000),
-                        'lastInventoryUpdate': int(row['lastInventoryUpdate'].timestamp() * 1000),
+                        'created': int(convertir_a_datetime(row['created']).timestamp() * 1000),
+                        'lastUpdate': int(convertir_a_datetime(row['lastUpdate']).timestamp() * 1000),
+                        'lastInventoryUpdate': int(convertir_a_datetime(row['lastInventoryUpdate']).timestamp() * 1000),
                         'enable': row['enable'],
                         'descripcion': row['descripcion'],
                         'enable': row['enable'],
@@ -58,10 +59,10 @@ def get_articulos(connection):
 
                     sql_subespecificaciones = """
                         SELECT * FROM subespecificaciones
-                        WHERE id_especificacion = %s
+                        WHERE id_especificacion = ?
                     """
                     cursor.execute(sql_subespecificaciones, (id_especificacion,))
-                    subespecificaciones_raw = cursor.fetchall()
+                    subespecificaciones_raw = resultados_a_json(cursor)
 
                     subespecificaciones = {sub['clave']: sub['valor'] for sub in subespecificaciones_raw}
                     especificacion = {
@@ -81,10 +82,10 @@ def get_articulos(connection):
 
                 sql_sucursales = """
                             SELECT id_sucursal FROM articulo_sucursal
-                            WHERE id_articulo = %s
+                            WHERE id_articulo = ?
                         """
                 cursor.execute(sql_sucursales, (id_articulo,))
-                sucursales = cursor.fetchall()
+                sucursales = resultados_a_json(cursor)
                 id_sucursales = [sucursal['id_sucursal'] for sucursal in sucursales]
                 articulo_results[id_articulo]['id_sucursales'] = id_sucursales
                     

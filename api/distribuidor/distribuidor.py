@@ -7,6 +7,7 @@ from .distribuidor_methods import distribuidor_fl2
 # from api.sucursal.sucursal_id import get_sucursal_for_distribuidor
 from utils.time import timedelta_to_string,timedelta_to_milliseconds
 
+from utils.serializer import resultados_a_json, convertir_a_datetime
 
 distribuidor_fl = Blueprint('distribuidor', __name__)
 distribuidor_fl.register_blueprint(distribuidor_fl1,)
@@ -20,14 +21,15 @@ def process_distribuidor(connection):
         with connection.cursor() as cursor:
             sql_distribuidor = "SELECT * FROM distribuidor"
             cursor.execute(sql_distribuidor)
-            distribuidores = cursor.fetchall()
+            distribuidores = resultados_a_json(cursor)
             
             for distribuidor in distribuidores:
                 id_distribuidor = distribuidor['id_distribuidor']
 
-                for key, value in distribuidor.items():
-                    if isinstance(value, datetime):
-                        distribuidor[key] = int(value.timestamp() * 1000)
+                for key in ['created', 'lastUpdate']: 
+                    if distribuidor[key]:
+                        usuarios_info_2=convertir_a_datetime(distribuidor[key])
+                        distribuidor[key] = int(usuarios_info_2.timestamp() * 1000)
 
                 sql_sucursales = """
                     SELECT s.* FROM sucursal s
@@ -35,19 +37,20 @@ def process_distribuidor(connection):
                     WHERE ds.id_distribuidor = ?
                 """
                 cursor.execute(sql_sucursales, (id_distribuidor,))
-                sucursales = cursor.fetchall()
+                sucursales = resultados_a_json(cursor)
 
                 for sucursal in sucursales:
-                    for key, value in sucursal.items():
-                        if isinstance(value, datetime):
-                            sucursal[key] = int(value.timestamp() * 1000)
+                    for key in ['created', 'lastUpdate']: 
+                        if sucursal[key]:
+                            usuarios_info_2=convertir_a_datetime(sucursal[key])
+                            sucursal[key] = int(usuarios_info_2.timestamp() * 1000)
 
                 distribuidor['sucursales'] = sucursales
 
 
                 sql_horarios = "SELECT * FROM horarios_distribuidor WHERE id_distribuidor = ?"
                 cursor.execute(sql_horarios, (id_distribuidor,))
-                horarios_raw = cursor.fetchall()
+                horarios_raw = resultados_a_json(cursor)
                 horarios_distribuidor= {}
                 for horario in horarios_raw:
                     dia = horario['day']
@@ -60,14 +63,14 @@ def process_distribuidor(connection):
 
                 sql_marcas = "SELECT marca FROM marcas_distribuidor WHERE id_distribuidor = ?"
                 cursor.execute(sql_marcas, (id_distribuidor,))
-                marcas_raw = cursor.fetchall()
+                marcas_raw = resultados_a_json(cursor)
                 marcas = [marca['marca'] for marca in marcas_raw]  
 
                 distribuidor['marcas'] = marcas
 
             return distribuidores
-    finally:
-        connection.close()
+    except Exception as e:
+        return jsonify({"error": f"Error en la base de datos: {e}"}), 500
 
 
 

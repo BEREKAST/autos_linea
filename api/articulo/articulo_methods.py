@@ -4,6 +4,7 @@ from config.database import connect_to_database
 from utils.time import convert_milliseconds_to_datetime,convert_milliseconds_to_time_string
 from datetime import datetime
 articulo_fl2 = Blueprint('articulo_post', __name__)
+from utils.serializer import resultados_a_json, convertir_a_datetime
 
 # @articulo_fl2.route('/articulo', methods=['POST'])
 # def crear_articulo():
@@ -55,13 +56,13 @@ def get_subespecificaciones_por_tipo(name_tipo):
         with connect_to_database() as connection:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT id_especificacion FROM especificaciones_adm WHERE tipo = ?", (name_tipo,))
-                id_result = cursor.fetchone()
+                id_result = resultados_a_json(cursor, unico_resultado=True)
                 print(id_result)
                 if id_result:
                     id_especificacion = id_result['id_especificacion']
                     print(id_especificacion)
                     cursor.execute("SELECT clave, valor FROM subespecificaciones_adm WHERE id_especificacion = ?", (id_especificacion,))
-                    subespecificaciones_raw = cursor.fetchall()
+                    subespecificaciones_raw = resultados_a_json(cursor)
                     print(subespecificaciones_raw)
                     subespecificaciones = {item['clave']: item['valor'] for item in subespecificaciones_raw}
 
@@ -96,27 +97,27 @@ def options_filter():
             with connection.cursor() as cursor:
                 # Año
                 cursor.execute(consulta1)
-                resultados = cursor.fetchall()
+                resultados = resultados_a_json(cursor)
                 opciones['ano'] = [ano['ano'] for ano in resultados if ano['ano'] is not None]
 
                 # Categoría
                 cursor.execute(consulta2)
-                resultados = cursor.fetchall()
+                resultados = resultados_a_json(cursor)
                 opciones['categoria'] = [categoria['categoria'] for categoria in resultados if categoria['categoria'] is not None]
 
                 # Marca
                 cursor.execute(consulta3)
-                resultados = cursor.fetchall()
+                resultados = resultados_a_json(cursor)
                 opciones['marca'] = [marca['marca'] for marca in resultados if marca['marca'] is not None]
 
                 # Modelo
                 cursor.execute(consulta4)
-                resultados = cursor.fetchall()
+                resultados = resultados_a_json(cursor)
                 opciones['modelo'] = [modelo['modelo'] for modelo in resultados if modelo['modelo'] is not None]
 
                 # Color
                 cursor.execute(consulta5)
-                resultados = cursor.fetchall()
+                resultados = resultados_a_json(cursor)
                 opciones['color'] = [color['color'] for color in resultados if color['color'] is not None]
 
         return jsonify(opciones)           
@@ -156,7 +157,7 @@ def buscar_articulos():
         with connect_to_database() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(consulta, parametros)
-                resultados = cursor.fetchall()
+                resultados = resultados_a_json(cursor)
                 return jsonify(resultados)
     except Exception as e:
         return jsonify({"error": f"Error en la base de datos: {e}"}), 500
@@ -167,7 +168,7 @@ def get_tipos_especificaciones():
         with connect_to_database() as connection:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT tipo FROM especificaciones_adm")
-                tipos_raw  = cursor.fetchall()
+                tipos_raw  = resultados_a_json(cursor)
                 if tipos_raw:
                     tipos = [registro['tipo'] for registro in tipos_raw]
                 print(tipos)
@@ -181,7 +182,7 @@ def get_tipos_sub_especificaciones():
         with connect_to_database() as connection:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT DISTINCT clave FROM subespecificaciones")
-                subespecificaciones_raw = cursor.fetchall()
+                subespecificaciones_raw = resultados_a_json(cursor)
                 if subespecificaciones_raw:
                     subespecificaciones = [registro['clave'] for registro in subespecificaciones_raw]
                 return jsonify({"especificaciones": subespecificaciones})
@@ -198,20 +199,20 @@ def get_tipos_sub_especificaciones():
 #             with connection.cursor() as cursor:
 #                 # Obtener el tipo de la especificación
 #                 cursor.execute("SELECT *.tipo FROM especificaciones_adm")
-#                 tipos = cursor.fetchone()
+#                 tipos = resultados_a_json(cursor, unico_resultado=True)
 
 #                 cursor.execute("SELECT tipo FROM especificaciones_adm WHERE id_especificacion = ?", (id_especificacion,))
-#                 tipo_raw = cursor.fetchone()
+#                 tipo_raw = resultados_a_json(cursor, unico_resultado=True)
 #                 if not tipo_raw:
 #                     return jsonify({"error": "Especificación no encontrada"}), 404
 #                 tipo = tipo_raw['tipo']
 #                 cursor.execute("SELECT clave, valor FROM subespecificaciones_adm WHERE id_especificacion = ?", (id_especificacion,))
-#                 subespecificaciones_raw = cursor.fetchall()
+#                 subespecificaciones_raw = resultados_a_json(cursor)
 #                 subespecificaciones = {registro['clave']: registro['valor'] for registro in subespecificaciones_raw}
 
 #                 # Obtener marcas
 #                 cursor.execute("SELECT marca FROM marcas_adm WHERE id_especificacion = ?", (id_especificacion,))
-#                 marcas_raw = cursor.fetchall()
+#                 marcas_raw = resultados_a_json(cursor)
 #                 marcas = [registro['marca'] for registro in marcas_raw]
 #                 respuesta = {
 #                     "especificaciones": [
@@ -233,7 +234,7 @@ def get_todas_especificaciones():
             with connection.cursor() as cursor:
                 # Obtener todas las especificaciones
                 cursor.execute("SELECT * FROM especificaciones_adm")
-                todas_especificaciones_raw = cursor.fetchall()
+                todas_especificaciones_raw = resultados_a_json(cursor)
                 
                 especificaciones = []
                 for espec in todas_especificaciones_raw:
@@ -242,12 +243,12 @@ def get_todas_especificaciones():
 
                     # Obtener subespecificaciones
                     cursor.execute("SELECT clave, valor FROM subespecificaciones_adm WHERE id_especificacion = ?", (id_especificacion,))
-                    subespecificaciones_raw = cursor.fetchall()
+                    subespecificaciones_raw = resultados_a_json(cursor)
                     subespecificaciones = {registro['clave']: registro['valor'] for registro in subespecificaciones_raw}
 
                     # Obtener marcas
                     cursor.execute("SELECT marca FROM marcas_adm WHERE id_especificacion = ?", (id_especificacion,))
-                    marcas_raw = cursor.fetchall()
+                    marcas_raw = resultados_a_json(cursor)
                     marcas = [registro['marca'] for registro in marcas_raw]
 
                     especificaciones.append({
@@ -528,7 +529,7 @@ def articulo_favorito(id_usuario, id_articulo):
             with connection.cursor() as cursor:
                 sql_check = """SELECT enable FROM favoritos WHERE id_usuario = ? AND id_articulo = ?"""
                 cursor.execute(sql_check, (id_usuario, id_articulo))
-                result = cursor.fetchone()
+                result = resultados_a_json(cursor, unico_resultado=True)
 
                 if result:
                     new_enable_status = not result['enable']
@@ -555,7 +556,7 @@ def articulo_referencia(id_articulo):
                          INNER JOIN articulo_sucursal a_s ON s.id_sucursal = a_s.id_sucursal
                          WHERE a_s.id_articulo = ?"""
                 cursor.execute(sql, (id_articulo,))
-                sucursales_raw = cursor.fetchall()
+                sucursales_raw = resultados_a_json(cursor)
                 print(sucursales_raw)
                 if not sucursales_raw:
                     return jsonify({"error": "No se encontraron sucursales para el artículo"}), 404

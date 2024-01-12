@@ -23,7 +23,6 @@ def connect_to_database():
         connection = pyodbc.connect(connection_string)
         yield connection
     except Exception as ex:
-        print("vino aca we")
         print("Error durante la conexión:", ex)
         if connection is not None:
             connection.close()

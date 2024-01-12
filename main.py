@@ -1,12 +1,13 @@
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 from config.database import connect_to_database
-from api.catalogo.catalogo import catalogo_fl
+# from api.catalogo.catalogo import catalogo_fl
 from api.distribuidor.distribuidor import distribuidor_fl
 from api.sucursal.sucursal import sucursal_fl
 from api.usuario.usuario import usuario_fl
 from api.articulo.articulo import articulo_fl
 
+import os
 
 app = Flask(__name__)
 app.env = "development"
@@ -79,7 +80,7 @@ def welcome():
         </div>
     '''
 
-app.register_blueprint(catalogo_fl, url_prefix='/catalogos')
+# app.register_blueprint(catalogo_fl, url_prefix='/catalogos')
 
 app.register_blueprint(distribuidor_fl, url_prefix='/distribuidores')
 app.register_blueprint(sucursal_fl, url_prefix='/sucursales')
@@ -87,4 +88,5 @@ app.register_blueprint(usuario_fl, url_prefix='/usuarios')
 app.register_blueprint(articulo_fl, url_prefix='/articulos')
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=True)
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port)

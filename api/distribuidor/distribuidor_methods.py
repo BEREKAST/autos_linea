@@ -3,6 +3,7 @@ from config.database import connect_to_database
 from flask import Flask, Response, jsonify, request
 from utils.time import convert_milliseconds_to_datetime,convert_milliseconds_to_time_string
 from utils.time import convert_milliseconds_to_datetime,convert_milliseconds_to_time_string,timedelta_to_milliseconds
+from utils.serializer import resultados_a_json, convertir_a_datetime
 
 distribuidor_fl2=Blueprint('distribuidor_methods', __name__)
 
@@ -167,12 +168,14 @@ def obtener_usuarios_por_distribuidor(id_distribuidor):
                     WHERE id_distribuidor = ?
                 """
                 cursor.execute(sql, (id_distribuidor,))
-                usuarios = cursor.fetchall()
+                usuarios = resultados_a_json(cursor)
                 print(usuarios)
                 for user in usuarios:
                     for key in ['created', 'lastUpdate']:
                         if user[key]:
-                            user[key] = int(user[key].timestamp() * 1000)
+                            usuarios_info_2=convertir_a_datetime(user[key])
+
+                            user[key] = int(usuarios_info_2.timestamp() * 1000)
                     
                 if not usuarios:
                     return jsonify({"error": f"No se encontraron usuarios para el distribuidor con ID {id_distribuidor}"}), 404
@@ -196,7 +199,7 @@ def obtener_articulos_por_distribuidor(id_distribuidor):
                     WHERE ds.id_distribuidor = ?;
                 """
                 cursor.execute(sql_query, (id_distribuidor,))
-                articulos = cursor.fetchall()
+                articulos = resultados_a_json(cursor)
 
                 articulos_procesados = []
                 for articulo_record in articulos:
@@ -219,7 +222,7 @@ def procesar_articulo(cursor, id_articulo):
         WHERE a.id_articulo = ?
     """
     cursor.execute(sql_articulo, (id_articulo,))
-    resultados_crudos = cursor.fetchall()
+    resultados_crudos = resultados_a_json(cursor)
     if not resultados_crudos:
         return None  
     articulo_resultado = {
@@ -251,7 +254,7 @@ def procesar_articulo(cursor, id_articulo):
                 WHERE id_especificacion = ?
             """
             cursor.execute(sql_subespecificaciones, (id_especificacion,))
-            subespecificaciones_raw = cursor.fetchall()
+            subespecificaciones_raw = resultados_a_json(cursor)
             subespecificaciones = {sub['clave']: sub['valor'] for sub in subespecificaciones_raw}
 
             especificacion = {
@@ -283,7 +286,7 @@ def procesar_articulo(cursor, id_articulo):
 #                     WHERE ds.id_distribuidor = ?;
 #                 """
 #                 cursor.execute(sql_query, (id_distribuidor,))
-#                 articulos = cursor.fetchall()
+#                 articulos = resultados_a_json(cursor)
 #                 articulos_processed = []
 #                 for articulo_record in articulos:
 #                     id_articulo=articulo_record['id_articulo']
@@ -297,7 +300,7 @@ def procesar_articulo(cursor, id_articulo):
 #                         WHERE a.id_articulo = ?
 #                     """
 #                     cursor.execute(sql_articulo, (id_articulo,))
-#                     raw_results = cursor.fetchall()
+#                     raw_results = resultados_a_json(cursor)
 #                     print(raw_results)
 #                     if not raw_results:
 #                         return None  # No se encontró el artículo
@@ -333,7 +336,7 @@ def procesar_articulo(cursor, id_articulo):
 #                                 WHERE id_especificacion = ?
 #                             """
 #                             cursor.execute(sql_subespecificaciones, (id_especificacion,))
-#                             subespecificaciones_raw = cursor.fetchall()
+#                             subespecificaciones_raw = resultados_a_json(cursor)
 #                             subespecificaciones = {sub['clave']: sub['valor'] for sub in subespecificaciones_raw}
 
 #                             especificacion = {
@@ -370,7 +373,7 @@ def obtener_sucursales_por_distribuidor(id_distribuidor):
                     WHERE ds.id_distribuidor = ?;
                 """
                 cursor.execute(sql_query, (id_distribuidor,))
-                sucursales_raw = cursor.fetchall()
+                sucursales_raw = resultados_a_json(cursor)
 
                 sucursales_processed = []
                 for sucursal_record in sucursales_raw:
@@ -378,11 +381,13 @@ def obtener_sucursales_por_distribuidor(id_distribuidor):
 
                     for key in ['created', 'lastUpdate']:
                         if sucursal_record[key]:
-                            sucursal_record[key] = int(sucursal_record[key].timestamp() * 1000)
+                            usuarios_info_2=convertir_a_datetime(sucursal_record[key])
+
+                            sucursal_record[key] = int(usuarios_info_2.timestamp() * 1000)
 
                     sql_sucursales_imagenes = "SELECT * FROM images_sucursal WHERE id_sucursal = ?;"
                     cursor.execute(sql_sucursales_imagenes, (id_sucursal,))
-                    sucursal_images = cursor.fetchall()
+                    sucursal_images = resultados_a_json(cursor)
                     sucursal_record['sucursal_images'] = sucursal_images
 
                     sql_articulos = """
@@ -391,17 +396,18 @@ def obtener_sucursales_por_distribuidor(id_distribuidor):
                         WHERE articulo_sucursal.id_sucursal = ?;
                     """
                     cursor.execute(sql_articulos, (id_sucursal,))
-                    articulos_list = cursor.fetchall()
+                    articulos_list = resultados_a_json(cursor)
                     for articulo in articulos_list:
                         for key in ['created', 'lastUpdate', 'lastInventoryUpdate']:
                             if articulo[key]:
-                                articulo[key] = int(articulo[key].timestamp() * 1000)
+                                usuarios_info_2=convertir_a_datetime(articulo[key])
+                                articulo[key] = int(usuarios_info_2.timestamp() * 1000)
 
                     sucursal_record['sucursal_articulos'] = articulos_list
 
                     sql_horarios_sucursal = "SELECT * FROM horarios_sucursal WHERE id_sucursal = ?"
                     cursor.execute(sql_horarios_sucursal, (id_sucursal,))
-                    horarios_raw = cursor.fetchall()
+                    horarios_raw = resultados_a_json(cursor)
                     horarios_sucursal = {}
                     for horario in horarios_raw:
                         dia = horario['day']
@@ -414,9 +420,12 @@ def obtener_sucursales_por_distribuidor(id_distribuidor):
                     sucursales_processed.append(sucursal_record)
 
             return jsonify(sucursales_processed)
-    finally:
-        connection.close()
+    except Exception as e:
+        return jsonify({"error": f"Error en la base de datos: {e}"}), 500
+    
 
+
+    
 # @distribuidor_fl2.route('/<int:id_distribuidor>/sucursales', methods=['GET'])
 # def obtener_sucursales_por_distribuidor(id_distribuidor):
 #     try:
@@ -429,14 +438,14 @@ def obtener_sucursales_por_distribuidor(id_distribuidor):
 #                     WHERE ds.id_distribuidor = ?;
 #                 """
 #                 cursor.execute(sql_query, (id_distribuidor,))
-#                 sucursales_raw = cursor.fetchall()
+#                 sucursales_raw = resultados_a_json(cursor)
 
 #                 sucursales_processed = []
 #                 for sucursal_record in sucursales_raw:
 #                     id_sucursal=sucursal_record['id_sucursal']
 #                     sql_sucursal = "SELECT * FROM sucursal WHERE id_sucursal = ?;"
 #                     cursor.execute(sql_sucursal, (id_sucursal,))
-#                     sucursal_record = cursor.fetchone()
+#                     sucursal_record = resultados_a_json(cursor, unico_resultado=True)
 
 #                     if sucursal_record:
 #                         for key in ['created', 'lastUpdate']:
@@ -445,14 +454,14 @@ def obtener_sucursales_por_distribuidor(id_distribuidor):
 
 #                         sql_sucursales_imagenes = "SELECT * FROM images_sucursal WHERE id_sucursal = ?;"
 #                         cursor.execute(sql_sucursales_imagenes, (id_sucursal,))
-#                         sucursal_images = cursor.fetchall()
+#                         sucursal_images = resultados_a_json(cursor)
 #                         sucursal_record['sucursal_images'] = sucursal_images
 
 #                         sql_articulos = """SELECT articulo.* FROM articulo
 #                                         JOIN articulo_sucursal ON articulo.id_articulo = articulo_sucursal.id_articulo
 #                                         WHERE articulo_sucursal.id_sucursal = ?;"""
 #                         cursor.execute(sql_articulos, (id_sucursal,))
-#                         articulos_list = cursor.fetchall()
+#                         articulos_list = resultados_a_json(cursor)
 
 #                         for articulo in articulos_list:
 #                             for key in ['created', 'lastUpdate', 'lastInventoryUpdate']:
@@ -464,7 +473,7 @@ def obtener_sucursales_por_distribuidor(id_distribuidor):
 #                         sucursal_record['sucursal_articulos'] = articulos_list
 #                         sql_horarios_sucursal = "SELECT * FROM horarios_sucursal WHERE id_sucursal = ?"
 #                         cursor.execute(sql_horarios_sucursal, (id_sucursal,))
-#                         horarios_raw = cursor.fetchall()
+#                         horarios_raw = resultados_a_json(cursor)
 #                         horarios_sucursal = {}
 #                         for horario in horarios_raw:
 #                             dia = horario['day']
@@ -492,7 +501,7 @@ def obtener_sucursales_por_distribuidor(id_distribuidor):
 #                     WHERE distribuidor_sucursal.id_distribuidor = ?
 #                 """
 #                 cursor.execute(sql, (id_distribuidor,))
-#                 sucursales = cursor.fetchall()
+#                 sucursales = resultados_a_json(cursor)
 
 #                 if not sucursales:
 #                     return jsonify({"error": f"No se encontraron sucursales para el distribuidor con ID {id_distribuidor}"}), 404
@@ -515,7 +524,7 @@ def obtener_sucursales_por_distribuidor(id_distribuidor):
 #                     WHERE distribuidor_sucursal.id_distribuidor = ?
 #                 """
 #                 cursor.execute(sql, (id_distribuidor,))
-#                 articulos = cursor.fetchall()
+#                 articulos = resultados_a_json(cursor)
 
 #                 if not articulos:
 #                     return jsonify({"error": f"No se encontraron artículos para el distribuidor con ID {id_distribuidor}"}), 404
